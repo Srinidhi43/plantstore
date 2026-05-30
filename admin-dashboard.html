@@ -1,0 +1,200 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <title>Admin Dashboard | GreenLeaf</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <style>
+        body {
+            font-family: "Segoe UI", sans-serif;
+            background: #f5f7f6;
+            margin: 0;
+        }
+
+        header {
+            background: #3a6b35;
+            color: white;
+            padding: 15px 30px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .container {
+            padding: 30px;
+        }
+
+        .form-box {
+            background: white;
+            padding: 20px;
+            border-radius: 10px;
+            margin-bottom: 30px;
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
+        }
+
+        input {
+            width: 100%;
+            padding: 10px;
+            margin-bottom: 10px;
+            border-radius: 5px;
+            border: 1px solid #ccc;
+        }
+
+        button {
+            padding: 10px 15px;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+        }
+
+        .add-btn {
+            background: #3a6b35;
+            color: white;
+        }
+
+        .delete-btn {
+            background: red;
+            color: white;
+        }
+
+        .product-card {
+            background: white;
+            padding: 15px;
+            margin-bottom: 10px;
+            border-radius: 8px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        img {
+            width: 60px;
+            height: 60px;
+            object-fit: cover;
+            border-radius: 5px;
+        }
+    </style>
+</head>
+
+<body>
+
+    <header>
+        <h2>Admin Dashboard</h2>
+        <button onclick="logout()">Logout</button>
+    </header>
+
+    <div class="container">
+
+        <!-- ADD PRODUCT -->
+        <div class="form-box">
+            <h3>Add Product</h3>
+            <input id="name" placeholder="Plant Name">
+            <input id="price" placeholder="Price">
+            <input id="category" placeholder="Category (description)">
+            <input type="file" id="image">
+            <button class="add-btn" onclick="addProduct()">Add Product</button>
+        </div>
+
+        <!-- PRODUCTS LIST -->
+        <h3>All Products</h3>
+        <div id="productList"></div>
+
+    </div>
+
+    <script>
+
+        /* ================= AUTH CHECK ================= */
+        const role = localStorage.getItem("role");
+
+        if (role !== "admin") {
+            alert("Access denied");
+            window.location.href = "AUTH.HTML";
+        }
+
+        /* ================= LOGOUT ================= */
+        function logout() {
+            localStorage.clear();
+            window.location.href = "HOMEPAGE.HTML";
+        }
+
+        /* ================= LOAD PRODUCTS ================= */
+        async function loadProducts() {
+            const res = await fetch("http://localhost:5000/api/products");
+            const products = await res.json();
+
+            const container = document.getElementById("productList");
+            container.innerHTML = "";
+
+            products.forEach(p => {
+
+                const imgSrc = p.image.startsWith("http")
+                    ? p.image
+                    : `/images/${p.image}`;
+
+                container.innerHTML += `
+    <div class="product-card">
+
+        <div>
+            <strong>${p.name}</strong><br>
+            ₹${p.price}<br>
+            ${p.description}
+        </div>
+
+        <img src="${imgSrc}">
+
+        <button class="delete-btn" onclick="deleteProduct(${p.id})">
+            Delete
+        </button>
+
+    </div>
+
+                    `;
+            });
+        }
+
+        /* ================= ADD PRODUCT ================= */
+        async function addProduct() {
+
+            const name = document.getElementById("name").value;
+            const price = document.getElementById("price").value;
+            const category = document.getElementById("category").value;
+            const imageFile = document.getElementById("image").files[0];
+
+            const formData = new FormData();   // ✅ FIXED
+
+            formData.append("name", name);
+            formData.append("price", price);
+            formData.append("category", category);
+            formData.append("image", imageFile);
+
+            await fetch("http://localhost:5000/api/admin/add-product", {
+                method: "POST",
+                headers: {
+                    "role": "admin"
+                },
+                body: formData
+            });
+
+            alert("Product added!");
+            loadProducts();
+        }
+        /* ================= DELETE ================= */
+        async function deleteProduct(id) {
+            await fetch(`http://localhost:5000/api/admin/delete-product/${id}`, {
+                method: "DELETE",
+                headers: { "role": "admin" }
+            });
+
+            loadProducts();
+        }
+
+        /* ================= INIT ================= */
+        loadProducts();
+
+    </script>
+
+</body>
+
+</html>
